@@ -209,14 +209,14 @@ class CatPoopDatabase:
             # Форматируем вывод
             if days > 0:
                 if hours > 0:
-                    return f"📅 **{cat_name}** покакал {days} дн. {hours} ч. {minutes} мин. назад\n\n🕐 Последний раз: {last_time.strftime('%d.%m.%y в %H:%M')}"
+                    return f"📅 **{cat_name}** покакал {days} дн. {hours} ч. {minutes} мин. назад\nПоследний раз: {last_time.strftime('%d.%m.%y в %H:%M')}"
                 else:
-                    return f"📅 **{cat_name}** покакал {days} дн. {minutes} мин. назад\n\n🕐 Последний раз: {last_time.strftime('%d.%m.%y в %H:%M')}"
+                    return f"📅 **{cat_name}** покакал {days} дн. {minutes} мин. назад\nПоследний раз: {last_time.strftime('%d.%m.%y в %H:%M')}"
             elif hours > 0:
-                return f"⏰ **{cat_name}** покакал {hours} ч. {minutes} мин. назад\n\n🕐 Последний раз: {last_time.strftime('%d.%m.%y в %H:%M')}"
+                return f"⏰ **{cat_name}** покакал {hours} ч. {minutes} мин. назад\nПоследний раз: {last_time.strftime('%d.%m.%y в %H:%M')}"
             else:
                 if minutes > 0:
-                    return f"⏰ **{cat_name}** покакал {minutes} мин. назад\n\n🕐 Последний раз: {last_time.strftime('%d.%m.%y в %H:%M')}"
+                    return f"⏰ **{cat_name}** покакал {minutes} мин. назад\nПоследний раз: {last_time.strftime('%d.%m.%y в %H:%M')}"
                 else:
                     return f"🆕 **{cat_name}** только что покакал!\n\n🕐 Время: {last_time.strftime('%d.%m.%y в %H:%M')}"
             
@@ -303,10 +303,10 @@ class CatPoopDatabase:
             avg_hours = sum(intervals) / len(intervals)
             
             if avg_hours < 24:
-                return f"📊 **Статистика за последние 3 месяца**\n📝 Всего записей: {len(cat_poops)}\n⏱ В среднем каждые {avg_hours:.1f} часов"
+                return f"**Статистика за последние 3 месяца**\nВсего записей: {len(cat_poops)}\n⏱ В среднем каждые {avg_hours:.1f} часов"
             else:
                 avg_days = avg_hours / 24
-                return f"📊 **Статистика за последние 3 месяца**\n📝 Всего записей: {len(cat_poops)}\n📅 В среднем каждые {avg_days:.1f} дней ({avg_hours:.1f} часов)"
+                return f"**Статистика за последние 3 месяца**\nВсего записей: {len(cat_poops)}\n📅 В среднем каждые {avg_days:.1f} дней ({avg_hours:.1f} часов)"
         
         except Exception as e:
             logger.error(f"❌ Ошибка статистики для {cat_name}: {e}")
