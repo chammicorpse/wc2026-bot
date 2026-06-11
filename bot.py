@@ -31,12 +31,16 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 async def show_cat_menu(update: Update, cat_name: str):
-    """Показывает меню действий с котом"""
+    """Показывает меню действий с котом в виде сетки 2x2"""
     keyboard = [
-        [InlineKeyboardButton("💩 Кот покакал", callback_data="poop")],
-        [InlineKeyboardButton("⏰ Как давно покакал кот?", callback_data="when")],
-        [InlineKeyboardButton("📜 История", callback_data="history")],
-        [InlineKeyboardButton("🔄 Сменить кота", callback_data="switch_cat_from_menu")]
+        [
+            InlineKeyboardButton("💩 Кот покакал", callback_data="poop"),
+            InlineKeyboardButton("⏰ Как давно?", callback_data="when")
+        ],
+        [
+            InlineKeyboardButton("📜 История", callback_data="history"),
+            InlineKeyboardButton("🔄 Сменить кота", callback_data="switch_cat_from_menu")
+        ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
