@@ -2,12 +2,11 @@ import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ConversationHandler, ContextTypes
 from config import BOT_TOKEN
-import database as db
+from google_sheets_db import db
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Состояния для ConversationHandler
 NAME_INPUT = 1
 SWITCH_CAT_INPUT = 2
 
@@ -19,6 +18,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(
         "🐾 Привет! Я бот «Кот покакал».\n\n"
+        "Все данные сохраняются в Google Sheets!\n\n"
         "Выбери действие:",
         reply_markup=reply_markup
     )
@@ -98,14 +98,12 @@ async def name_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return NAME_INPUT
     
-    # Сохраняем кота
+    # Добавляем кота
+    db.add_cat(name)
     context.user_data["current_cat"] = name
-    # Создаём пустой файл, если не существует
-    db.load_cat_data(name)
     
     await update.message.reply_text(f"✅ Познакомились! Теперь у тебя есть кот {name}")
     
-    # Показываем меню действий (через новое сообщение с кнопками)
     keyboard = [
         [InlineKeyboardButton("💩 Кот покакал", callback_data="poop")],
         [InlineKeyboardButton("⏰ Как давно покакал кот?", callback_data="when")],
@@ -148,7 +146,6 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 def main():
     app = Application.builder().token(BOT_TOKEN).build()
     
-    # Conversation для знакомства с новым котом
     conv_new_cat = ConversationHandler(
         entry_points=[CallbackQueryHandler(button_handler, pattern="^new_cat$")],
         states={
@@ -157,7 +154,6 @@ def main():
         fallbacks=[CommandHandler("cancel", cancel)],
     )
     
-    # Conversation для смены кота
     conv_switch_cat = ConversationHandler(
         entry_points=[CallbackQueryHandler(button_handler, pattern="^switch_cat$")],
         states={
@@ -171,7 +167,7 @@ def main():
     app.add_handler(conv_switch_cat)
     app.add_handler(CallbackQueryHandler(button_handler, pattern="^(cat_|poop|when|history|switch_cat_from_menu)"))
     
-    logger.info("Бот запущен...")
+    logger.info("Бот с Google Sheets запущен...")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == "__main__":
