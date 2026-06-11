@@ -125,17 +125,25 @@ async def name_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработка ввода имени нового кота"""
     name = update.message.text.strip()
     
+    # Очищаем имя от лишних пробелов и приводим к нормальному виду
+    name = ' '.join(name.split())
+    
+    logger.info(f"Пользователь ввёл имя: '{name}'")
+    
     if not name:
         await update.message.reply_text("❌ Имя не может быть пустым. Попробуйте еще раз:")
         return NAME_INPUT
     
-    # Проверяем существование кота
-    if db.cat_exists(name):
+    # Проверяем существование кота (с нормализацией)
+    cat_exists = db.cat_exists(name)
+    logger.info(f"Проверка существования кота '{name}': {cat_exists}")
+    
+    if cat_exists:
         await update.message.reply_text(
-            "😸 Круто! Тезка! Но давай другое имя?\n\n"
+            f"😸 Круто! Тезка! Кот с именем '{name}' уже существует.\n\n"
             "Пожалуйста, введите другое имя кота:"
         )
-        # Возвращаем NAME_INPUT, чтобы бот снова ждал ввод
+        # Важно: просто возвращаем NAME_INPUT, НЕ завершая ConversationHandler
         return NAME_INPUT
     
     try:
