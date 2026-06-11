@@ -87,17 +87,12 @@ class CatPoopDatabase:
         try:
             cats_ws = self.sheet.worksheet("cats")
             
-            # Проверяем, существует ли уже кот
-            try:
-                existing = cats_ws.find(cat_name)
-                if existing:
-                    logger.info(f"Кот {cat_name} уже существует")
-                    return False
-            except gspread.CellNotFound:
-                pass  # Кот не найден, продолжаем
+            # Проверяем, существует ли уже кот (без учёта регистра)
+            if self.cat_exists(cat_name):
+                logger.info(f"Кот {cat_name} уже существует")
+                return False
             
             now = datetime.now().isoformat()
-            # Используем append_row с правильным форматированием
             cats_ws.append_row([str(cat_name), str(now), str(now)], value_input_option='USER_ENTERED')
             logger.info(f"✅ Добавлен кот: {cat_name}")
             return True
@@ -106,16 +101,24 @@ class CatPoopDatabase:
             return False
     
     def cat_exists(self, cat_name: str) -> bool:
-        """Проверяет существование кота"""
+        """Проверяет существование кота (без учёта регистра)"""
         try:
             cats_ws = self.sheet.worksheet("cats")
-            try:
-                cats_ws.find(cat_name)
-                logger.info(f"Кот {cat_name} найден")
-                return True
-            except gspread.CellNotFound:
-                logger.info(f"Кот {cat_name} не найден")
-                return False
+            # Получаем все имена котов
+            records = cats_ws.get_all_records()
+            
+            # Нормализуем имя для сравнения (приводим к нижнему регистру)
+            search_name = cat_name.strip().lower()
+            
+            for record in records:
+                existing_name = record.get('name', '').strip().lower()
+                if existing_name == search_name:
+                    logger.info(f"Кот {cat_name} найден (совпадение с {record.get('name')})")
+                    return True
+            
+            logger.info(f"Кот {cat_name} не найден")
+            return False
+            
         except Exception as e:
             logger.error(f"❌ Ошибка проверки кота {cat_name}: {e}")
             return False
@@ -140,9 +143,12 @@ class CatPoopDatabase:
             # Обновляем last_updated у кота
             try:
                 cats_ws = self.sheet.worksheet("cats")
-                cell = cats_ws.find(cat_name)
-                if cell:
-                    cats_ws.update(f"C{cell.row}", now.isoformat(), value_input_option='USER_ENTERED')
+                # Находим кота без учёта регистра
+                records = cats_ws.get_all_records()
+                for i, record in enumerate(records, start=2):  # start=2 потому что строка 1 - заголовок
+                    if record.get('name', '').strip().lower() == cat_name.strip().lower():
+                        cats_ws.update(f"C{i}", now.isoformat(), value_input_option='USER_ENTERED')
+                        break
             except Exception as e:
                 logger.warning(f"Не удалось обновить last_updated: {e}")
             
@@ -150,7 +156,6 @@ class CatPoopDatabase:
             return now
         except Exception as e:
             logger.error(f"❌ Ошибка добавления какашки для {cat_name}: {e}")
-            logger.error(f"Детали ошибки: {str(e)}")
             raise
     
     def get_last_poop_time(self, cat_name: str) -> Optional[datetime]:
@@ -159,16 +164,17 @@ class CatPoopDatabase:
             poops_ws = self.sheet.worksheet("poops")
             records = poops_ws.get_all_records()
             
+            # Нормализуем имя для поиска
+            search_name = cat_name.strip().lower()
+            
             # Фильтруем записи для конкретного кота
             cat_poops = []
             for record in records:
-                if record.get('cat_name') == cat_name:
-                    try:
-                        timestamp = record.get('timestamp')
-                        if timestamp:
-                            cat_poops.append(timestamp)
-                    except:
-                        continue
+                record_name = record.get('cat_name', '').strip().lower()
+                if record_name == search_name:
+                    timestamp = record.get('timestamp')
+                    if timestamp:
+                        cat_poops.append(timestamp)
             
             if not cat_poops:
                 logger.info(f"Нет записей о какашках для кота {cat_name}")
@@ -200,7 +206,7 @@ class CatPoopDatabase:
             hours = int((total_seconds % 86400) // 3600)
             minutes = int((total_seconds % 3600) // 60)
             
-            # Форматируем вывод в зависимости от того, сколько времени прошло
+            # Форматируем вывод
             if days > 0:
                 if hours > 0:
                     return f"📅 **{cat_name}** покакал {days} дн. {hours} ч. {minutes} мин. назад\n\n🕐 Последний раз: {last_time.strftime('%d.%m.%Y в %H:%M:%S')}"
@@ -224,10 +230,14 @@ class CatPoopDatabase:
             poops_ws = self.sheet.worksheet("poops")
             records = poops_ws.get_all_records()
             
+            # Нормализуем имя для поиска
+            search_name = cat_name.strip().lower()
+            
             # Фильтруем записи для конкретного кота
             cat_poops = []
             for record in records:
-                if record.get('cat_name') == cat_name:
+                record_name = record.get('cat_name', '').strip().lower()
+                if record_name == search_name:
                     timestamp = record.get('timestamp')
                     if timestamp:
                         cat_poops.append(timestamp)
@@ -260,10 +270,14 @@ class CatPoopDatabase:
             
             three_months_ago = datetime.now() - timedelta(days=90)
             
+            # Нормализуем имя для поиска
+            search_name = cat_name.strip().lower()
+            
             # Собираем записи за последние 3 месяца
             cat_poops = []
             for record in records:
-                if record.get('cat_name') == cat_name:
+                record_name = record.get('cat_name', '').strip().lower()
+                if record_name == search_name:
                     try:
                         timestamp = record.get('timestamp')
                         if timestamp:
@@ -280,15 +294,14 @@ class CatPoopDatabase:
                     return "📊 За последние 3 месяца: только одна какашка. Недостаточно данных для статистики"
                 return "📊 За последние 3 месяца записей нет"
             
-            # Вычисляем интервалы между какашками
+            # Вычисляем интервалы
             intervals = []
             for i in range(1, len(cat_poops)):
                 delta = cat_poops[i] - cat_poops[i-1]
-                intervals.append(delta.total_seconds() / 3600)  # в часах
+                intervals.append(delta.total_seconds() / 3600)
             
             avg_hours = sum(intervals) / len(intervals)
             
-            # Форматируем результат
             if avg_hours < 24:
                 return f"📊 **Статистика за последние 3 месяца**\n📝 Всего записей: {len(cat_poops)}\n⏱ В среднем каждые {avg_hours:.1f} часов"
             else:
