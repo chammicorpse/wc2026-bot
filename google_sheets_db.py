@@ -131,8 +131,8 @@ class CatPoopDatabase:
             
             # Подготавливаем данные с правильным форматированием
             timestamp = now.isoformat()
-            date_str = now.strftime("%d.%m.%Y")
-            time_str = now.strftime("%H:%M:%S")
+            date_str = now.strftime("%d.%m.%y")
+            time_str = now.strftime("%H:%M")
             
             # Используем append_row с явным преобразованием в строки
             row_data = [str(cat_name), str(timestamp), str(date_str), str(time_str)]
@@ -152,7 +152,7 @@ class CatPoopDatabase:
             except Exception as e:
                 logger.warning(f"Не удалось обновить last_updated: {e}")
             
-            logger.info(f"✅ Добавлена какашка для кота {cat_name} в {now.strftime('%d.%m.%Y %H:%M:%S')}")
+            logger.info(f"✅ Добавлена какашка для кота {cat_name} в {now.strftime('%d.%m.%y %H:%M')}")
             return now
         except Exception as e:
             logger.error(f"❌ Ошибка добавления какашки для {cat_name}: {e}")
@@ -209,22 +209,22 @@ class CatPoopDatabase:
             # Форматируем вывод
             if days > 0:
                 if hours > 0:
-                    return f"📅 **{cat_name}** покакал {days} дн. {hours} ч. {minutes} мин. назад\n\n🕐 Последний раз: {last_time.strftime('%d.%m.%Y в %H:%M:%S')}"
+                    return f"📅 **{cat_name}** покакал {days} дн. {hours} ч. {minutes} мин. назад\n\n🕐 Последний раз: {last_time.strftime('%d.%m.%y в %H:%M')}"
                 else:
-                    return f"📅 **{cat_name}** покакал {days} дн. {minutes} мин. назад\n\n🕐 Последний раз: {last_time.strftime('%d.%m.%Y в %H:%M:%S')}"
+                    return f"📅 **{cat_name}** покакал {days} дн. {minutes} мин. назад\n\n🕐 Последний раз: {last_time.strftime('%d.%m.%y в %H:%M')}"
             elif hours > 0:
-                return f"⏰ **{cat_name}** покакал {hours} ч. {minutes} мин. назад\n\n🕐 Последний раз: {last_time.strftime('%d.%m.%Y в %H:%M:%S')}"
+                return f"⏰ **{cat_name}** покакал {hours} ч. {minutes} мин. назад\n\n🕐 Последний раз: {last_time.strftime('%d.%m.%y в %H:%M')}"
             else:
                 if minutes > 0:
-                    return f"⏰ **{cat_name}** покакал {minutes} мин. назад\n\n🕐 Последний раз: {last_time.strftime('%d.%m.%Y в %H:%M:%S')}"
+                    return f"⏰ **{cat_name}** покакал {minutes} мин. назад\n\n🕐 Последний раз: {last_time.strftime('%d.%m.%y в %H:%M')}"
                 else:
-                    return f"🆕 **{cat_name}** только что покакал!\n\n🕐 Время: {last_time.strftime('%d.%m.%Y в %H:%M:%S')}"
+                    return f"🆕 **{cat_name}** только что покакал!\n\n🕐 Время: {last_time.strftime('%d.%m.%y в %H:%M')}"
             
         except Exception as e:
             logger.error(f"❌ Ошибка в get_time_since_last_poop для {cat_name}: {e}")
             return f"❌ Ошибка получения времени: {str(e)}"
     
-    def get_history(self, cat_name: str, limit: int = 10) -> List[str]:
+    def get_history(self, cat_name: str, limit: int = 5) -> List[str]:
         """Возвращает последние записи истории"""
         try:
             poops_ws = self.sheet.worksheet("poops")
@@ -254,7 +254,7 @@ class CatPoopDatabase:
             result = []
             for i, timestamp in enumerate(cat_poops[:limit], 1):
                 dt = datetime.fromisoformat(timestamp)
-                result.append(f"{i}. {dt.strftime('%d.%m.%Y %H:%M:%S')}")
+                result.append(f"{i}. {dt.strftime('%d.%m.%y (%H:%M)')}")
             
             return result
             
