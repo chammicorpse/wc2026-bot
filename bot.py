@@ -16,8 +16,10 @@ SWITCH_CAT_INPUT = 2
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработчик команды /start"""
     keyboard = [
-        [InlineKeyboardButton("🐱 Познакомиться с котом", callback_data="new_cat")],
-        [InlineKeyboardButton("🔄 Сменить кота", callback_data="switch_cat")]
+        [
+            InlineKeyboardButton("🐱 Познакомиться с котом", callback_data="new_cat"),
+            InlineKeyboardButton("🔄 Сменить кота", callback_data="switch_cat")
+        ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
@@ -57,6 +59,10 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     
     try:
+        if query.data == "cancel_input":
+            await query.edit_message_text("❌ Создание кота отменено. Нажмите /start для начала.")
+            return ConversationHandler.END
+        
         if query.data == "new_cat":
             await query.edit_message_text("📝 Введите имя кота:")
             return NAME_INPUT
@@ -127,20 +133,44 @@ async def name_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Имя не может быть пустым. Попробуйте еще раз:")
         return NAME_INPUT
     
+    # Проверяем существование кота
     if db.cat_exists(name):
+        # Добавляем кнопку отмены
+        keyboard = [[InlineKeyboardButton("❌ Отмена", callback_data="cancel_input")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
         await update.message.reply_text(
             "😸 Круто! Тезка! Но давай другое имя?\n\n"
-            "Введите другое имя кота:"
+            "Пожалуйста, введите другое имя кота:",
+            reply_markup=reply_markup
         )
+        # Возвращаем NAME_INPUT, чтобы бот снова ждал ввода
         return NAME_INPUT
     
     try:
+        # Добавляем кота
         db.add_cat(name)
         context.user_data["current_cat"] = name
         
         await update.message.reply_text(f"✅ Познакомились! Теперь у тебя есть кот {name}")
         
-        await show_cat_menu(update, name)
+        # Показываем меню с сеткой 2x2
+        keyboard = [
+            [
+                InlineKeyboardButton("💩 Кот покакал", callback_data="poop"),
+                InlineKeyboardButton("⏰ Как давно?", callback_data="when")
+            ],
+            [
+                InlineKeyboardButton("📜 История", callback_data="history"),
+                InlineKeyboardButton("🔄 Сменить кота", callback_data="switch_cat_from_menu")
+            ]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await update.message.reply_text(
+            f"🐱 Кот: **{name}**\n\nЧто он сделал?",
+            parse_mode="Markdown",
+            reply_markup=reply_markup
+        )
         
     except Exception as e:
         logger.error(f"Ошибка при добавлении кота: {e}")
@@ -163,8 +193,10 @@ async def switch_cat_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Сначала познакомьтесь с котом через /start → Познакомиться с котом"
         )
         keyboard = [
-            [InlineKeyboardButton("🐱 Познакомиться с котом", callback_data="new_cat")],
-            [InlineKeyboardButton("🔄 Сменить кота", callback_data="switch_cat")]
+            [
+                InlineKeyboardButton("🐱 Познакомиться с котом", callback_data="new_cat"),
+                InlineKeyboardButton("🔄 Сменить кота", callback_data="switch_cat")
+            ]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         await update.message.reply_text(
@@ -209,7 +241,7 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(conv_new_cat)
     app.add_handler(conv_switch_cat)
-    app.add_handler(CallbackQueryHandler(button_handler, pattern="^(poop|when|history)$"))
+    app.add_handler(CallbackQueryHandler(button_handler, pattern="^(poop|when|history|cancel_input)$"))
     
     logger.info("🚀 Бот с Google Sheets запущен...")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
