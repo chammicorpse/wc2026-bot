@@ -59,10 +59,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     
     try:
-        if query.data == "cancel_input":
-            await query.edit_message_text("❌ Создание кота отменено. Нажмите /start для начала.")
-            return ConversationHandler.END
-        
         if query.data == "new_cat":
             await query.edit_message_text("📝 Введите имя кота:")
             return NAME_INPUT
@@ -135,16 +131,11 @@ async def name_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # Проверяем существование кота
     if db.cat_exists(name):
-        # Добавляем кнопку отмены
-        keyboard = [[InlineKeyboardButton("❌ Отмена", callback_data="cancel_input")]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        
         await update.message.reply_text(
             "😸 Круто! Тезка! Но давай другое имя?\n\n"
-            "Пожалуйста, введите другое имя кота:",
-            reply_markup=reply_markup
+            "Пожалуйста, введите другое имя кота:"
         )
-        # Возвращаем NAME_INPUT, чтобы бот снова ждал ввода
+        # Возвращаем NAME_INPUT, чтобы бот снова ждал ввод
         return NAME_INPUT
     
     try:
@@ -241,7 +232,7 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(conv_new_cat)
     app.add_handler(conv_switch_cat)
-    app.add_handler(CallbackQueryHandler(button_handler, pattern="^(poop|when|history|cancel_input)$"))
+    app.add_handler(CallbackQueryHandler(button_handler, pattern="^(poop|when|history)$"))
     
     logger.info("🚀 Бот с Google Sheets запущен...")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
