@@ -80,8 +80,8 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             try:
                 poop_time = db.add_poop(cat_name)
                 await query.edit_message_text(
-                    f"💩 Кот {cat_name} покакал!\n"
-                    f"🕐 Время: {poop_time.strftime('%d.%m.%Y %H:%M:%S')}"
+                    f"💩 Кот {cat_name} покакал! 💩\n"
+                    f"Время: {poop_time.strftime('%d.%m.%y %H:%M')}"
                 )
                 await show_cat_menu(update, cat_name)
             except Exception as e:
@@ -112,7 +112,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             else:
                 history_text = "📭 История пуста"
             
-            text = f"📜 **История кота {cat_name}:**\n\n{history_text}\n\n{stats}"
+            text = f"📜 **История кота {cat_name}:**\n{history_text}\n{stats}"
             
             await query.message.reply_text(text, parse_mode="Markdown")
             await show_cat_menu(update, cat_name)
