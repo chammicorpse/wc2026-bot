@@ -65,7 +65,7 @@ class CatPoopDatabase:
             except gspread.WorksheetNotFound:
                 logger.info("Создаю лист 'cats'")
                 cats_worksheet = self.sheet.add_worksheet("cats", rows=1, cols=3)
-                cats_worksheet.append_row(["name", "created_at", "last_updated"])
+                cats_worksheet.update('A1:C1', [['name', 'created_at', 'last_updated']])
                 logger.info("✅ Лист 'cats' создан")
             
             # Лист для записей о какашках
@@ -75,7 +75,7 @@ class CatPoopDatabase:
             except gspread.WorksheetNotFound:
                 logger.info("Создаю лист 'poops'")
                 poops_worksheet = self.sheet.add_worksheet("poops", rows=1, cols=4)
-                poops_worksheet.append_row(["cat_name", "timestamp", "date", "time"])
+                poops_worksheet.update('A1:D1', [['cat_name', 'timestamp', 'date', 'time']])
                 logger.info("✅ Лист 'poops' создан")
             
         except Exception as e:
@@ -88,13 +88,17 @@ class CatPoopDatabase:
             cats_ws = self.sheet.worksheet("cats")
             
             # Проверяем, существует ли уже кот
-            existing = cats_ws.findall(cat_name)
-            if existing:
-                logger.info(f"Кот {cat_name} уже существует")
-                return False
+            try:
+                existing = cats_ws.find(cat_name)
+                if existing:
+                    logger.info(f"Кот {cat_name} уже существует")
+                    return False
+            except gspread.CellNotFound:
+                pass  # Кот не найден, продолжаем
             
             now = datetime.now().isoformat()
-            cats_ws.append_row([cat_name, now, now])
+            # Используем append_row с правильным форматированием
+            cats_ws.append_row([str(cat_name), str(now), str(now)], value_input_option='USER_ENTERED')
             logger.info(f"✅ Добавлен кот: {cat_name}")
             return True
         except Exception as e:
@@ -105,10 +109,13 @@ class CatPoopDatabase:
         """Проверяет существование кота"""
         try:
             cats_ws = self.sheet.worksheet("cats")
-            cells = cats_ws.findall(cat_name)
-            exists = len(cells) > 0
-            logger.info(f"Проверка кота {cat_name}: {'найден' if exists else 'не найден'}")
-            return exists
+            try:
+                cats_ws.find(cat_name)
+                logger.info(f"Кот {cat_name} найден")
+                return True
+            except gspread.CellNotFound:
+                logger.info(f"Кот {cat_name} не найден")
+                return False
         except Exception as e:
             logger.error(f"❌ Ошибка проверки кота {cat_name}: {e}")
             return False
@@ -119,24 +126,31 @@ class CatPoopDatabase:
             poops_ws = self.sheet.worksheet("poops")
             now = datetime.now()
             
-            # Добавляем запись
-            poops_ws.append_row([
-                cat_name,
-                now.isoformat(),
-                now.strftime("%d.%m.%Y"),
-                now.strftime("%H:%M:%S")
-            ])
+            # Подготавливаем данные с правильным форматированием
+            timestamp = now.isoformat()
+            date_str = now.strftime("%d.%m.%Y")
+            time_str = now.strftime("%H:%M:%S")
+            
+            # Используем append_row с явным преобразованием в строки
+            row_data = [str(cat_name), str(timestamp), str(date_str), str(time_str)]
+            
+            # Добавляем строку с опцией USER_ENTERED для правильной обработки данных
+            poops_ws.append_row(row_data, value_input_option='USER_ENTERED')
             
             # Обновляем last_updated у кота
-            cats_ws = self.sheet.worksheet("cats")
-            cell = cats_ws.find(cat_name)
-            if cell:
-                cats_ws.update(f"C{cell.row}", now.isoformat())
+            try:
+                cats_ws = self.sheet.worksheet("cats")
+                cell = cats_ws.find(cat_name)
+                if cell:
+                    cats_ws.update(f"C{cell.row}", now.isoformat(), value_input_option='USER_ENTERED')
+            except Exception as e:
+                logger.warning(f"Не удалось обновить last_updated: {e}")
             
             logger.info(f"✅ Добавлена какашка для кота {cat_name} в {now.strftime('%d.%m.%Y %H:%M:%S')}")
             return now
         except Exception as e:
             logger.error(f"❌ Ошибка добавления какашки для {cat_name}: {e}")
+            logger.error(f"Детали ошибки: {str(e)}")
             raise
     
     def get_last_poop_time(self, cat_name: str) -> Optional[datetime]:
@@ -150,7 +164,9 @@ class CatPoopDatabase:
             for record in records:
                 if record.get('cat_name') == cat_name:
                     try:
-                        cat_poops.append(record)
+                        timestamp = record.get('timestamp')
+                        if timestamp:
+                            cat_poops.append(timestamp)
                     except:
                         continue
             
@@ -159,8 +175,8 @@ class CatPoopDatabase:
                 return None
             
             # Находим последнюю запись
-            last_poop = max(cat_poops, key=lambda x: x['timestamp'])
-            result = datetime.fromisoformat(last_poop['timestamp'])
+            last_timestamp = max(cat_poops)
+            result = datetime.fromisoformat(last_timestamp)
             logger.info(f"Последняя какашка кота {cat_name}: {result}")
             return result
         except Exception as e:
@@ -173,7 +189,7 @@ class CatPoopDatabase:
             last_time = self.get_last_poop_time(cat_name)
             
             if not last_time:
-                return "😿 У кота нет записей о том, что он какал!"
+                return f"😿 У кота **{cat_name}** нет записей о том, что он какал!"
             
             now = datetime.now()
             diff = now - last_time
@@ -212,10 +228,12 @@ class CatPoopDatabase:
             cat_poops = []
             for record in records:
                 if record.get('cat_name') == cat_name:
-                    cat_poops.append(record)
+                    timestamp = record.get('timestamp')
+                    if timestamp:
+                        cat_poops.append(timestamp)
             
             # Сортируем по времени (сначала новые)
-            cat_poops.sort(key=lambda x: x['timestamp'], reverse=True)
+            cat_poops.sort(reverse=True)
             
             logger.info(f"Найдено {len(cat_poops)} записей для кота {cat_name}")
             
@@ -224,8 +242,8 @@ class CatPoopDatabase:
             
             # Форматируем результат
             result = []
-            for i, poop in enumerate(cat_poops[:limit], 1):
-                dt = datetime.fromisoformat(poop['timestamp'])
+            for i, timestamp in enumerate(cat_poops[:limit], 1):
+                dt = datetime.fromisoformat(timestamp)
                 result.append(f"{i}. {dt.strftime('%d.%m.%Y %H:%M:%S')}")
             
             return result
@@ -247,9 +265,11 @@ class CatPoopDatabase:
             for record in records:
                 if record.get('cat_name') == cat_name:
                     try:
-                        dt = datetime.fromisoformat(record['timestamp'])
-                        if dt >= three_months_ago:
-                            cat_poops.append(dt)
+                        timestamp = record.get('timestamp')
+                        if timestamp:
+                            dt = datetime.fromisoformat(timestamp)
+                            if dt >= three_months_ago:
+                                cat_poops.append(dt)
                     except:
                         continue
             
