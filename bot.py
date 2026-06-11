@@ -46,7 +46,7 @@ async def show_cat_menu(update: Update, cat_name: str):
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    text = f"Что сделал 🐱 Кот: **{cat_name}**?"
+    text = f"Что сделал 🐱 **{cat_name}**?"
     
     if isinstance(update, Update) and hasattr(update, 'callback_query') and update.callback_query:
         await update.callback_query.message.reply_text(text, parse_mode="Markdown", reply_markup=reply_markup)
@@ -166,7 +166,7 @@ async def name_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         await update.message.reply_text(
-            f"🐱 Кот: **{name}**\n\nЧто он сделал?",
+            f"🐱 Кот: **{name}**\nЧто он сделал?",
             parse_mode="Markdown",
             reply_markup=reply_markup
         )
