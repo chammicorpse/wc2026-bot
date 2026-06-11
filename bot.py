@@ -26,8 +26,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data.pop("current_cat", None)
     
     await update.message.reply_text(
-        "🐾 Привет! Я бот «Кот покакал».\n\n"
-        "Все данные сохраняются в Google Sheets!\n\n"
+        "🐾 Привет! Я бот «Кот покакал».\n"
+        "Все данные сохраняются в Google Sheets у Кати!\n"
         "Выбери действие:",
         reply_markup=reply_markup
     )
@@ -46,7 +46,7 @@ async def show_cat_menu(update: Update, cat_name: str):
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    text = f"🐱 Кот: **{cat_name}**\n\nЧто он сделал?"
+    text = f"Что сделал 🐱 Кот: **{cat_name}**?"
     
     if isinstance(update, Update) and hasattr(update, 'callback_query') and update.callback_query:
         await update.callback_query.message.reply_text(text, parse_mode="Markdown", reply_markup=reply_markup)
