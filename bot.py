@@ -336,7 +336,10 @@ def apply_result(match: dict, result: str, pen_winner: str | None = None):
 
 # ── Хэндлеры ──────────────────────────────────────────────────────────────────
 
-bot = Bot(token=TOKEN, parse_mode="HTML")
+from aiogram.types import BotCommand
+from aiogram.client.default import DefaultBotProperties
+
+bot = Bot(token=TOKEN, default=DefaultBotProperties(parse_mode="HTML"))
 dp = Dispatcher(storage=MemoryStorage())
 
 @dp.message(Command("start"))
