@@ -1,10 +1,30 @@
 import asyncio
 import logging
+import os
+import threading
+from flask import Flask
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ConversationHandler, ContextTypes
 from config import BOT_TOKEN
 from google_sheets_db import db
 
+# Создаём Flask приложение для healthcheck
+flask_app = Flask(__name__)
+
+@flask_app.route('/')
+def healthcheck():
+    return "🐱 Cat Poop Bot is running!", 200
+
+@flask_app.route('/health')
+def health():
+    return "OK", 200
+
+def run_flask():
+    """Запускает Flask сервер для Render healthcheck"""
+    port = int(os.getenv('PORT', 8080))
+    flask_app.run(host='0.0.0.0', port=port, debug=False)
+
+# Настройка логирования
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -125,8 +145,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def name_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработка ввода имени нового кота"""
     name = update.message.text.strip()
-    
-    # Очищаем имя от лишних пробелов и приводим к нормальному виду
     name = ' '.join(name.split())
     
     logger.info(f"Пользователь ввёл имя: '{name}'")
@@ -135,7 +153,6 @@ async def name_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Имя не может быть пустым. Попробуйте еще раз:")
         return NAME_INPUT
     
-    # Проверяем существование кота (с нормализацией)
     cat_exists = db.cat_exists(name)
     logger.info(f"Проверка существования кота '{name}': {cat_exists}")
     
@@ -144,17 +161,14 @@ async def name_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"😸 Круто! Тезка! Кот с именем '{name}' уже существует.\n\n"
             "Пожалуйста, введите другое имя кота:"
         )
-        # Важно: просто возвращаем NAME_INPUT, НЕ завершая ConversationHandler
         return NAME_INPUT
     
     try:
-        # Добавляем кота
         db.add_cat(name)
         context.user_data["current_cat"] = name
         
         await update.message.reply_text(f"✅ Познакомились! Теперь у тебя есть кот {name}")
         
-        # Показываем меню с сеткой 2x2
         keyboard = [
             [
                 InlineKeyboardButton("💩 Кот покакал", callback_data="poop"),
@@ -217,6 +231,12 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def main():
     """Запуск бота"""
+    # Запускаем Flask в отдельном потоке для healthcheck
+    flask_thread = threading.Thread(target=run_flask, daemon=True)
+    flask_thread.start()
+    logger.info("✅ Flask сервер запущен для healthcheck")
+    
+    # Создаём event loop для Python 3.14
     try:
         loop = asyncio.get_event_loop()
     except RuntimeError:
